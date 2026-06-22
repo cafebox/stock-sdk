@@ -269,6 +269,75 @@ const sdk = new StockSDK({
 
 ---
 
+## getThemeList
+
+获取全部主题基金列表（行业板块 + 概念板块）。
+
+### 签名
+
+```typescript
+getThemeList(options?: GetThemeListOptions): Promise<ThemeFundListResult>
+```
+
+### 参数
+
+```typescript
+interface GetThemeListOptions {
+  /** 排序字段，默认 'ZDF'（日涨幅） */
+  sort?: 'ZDF' | 'SYL_W' | 'SYL_M' | 'SYL_3M' | 'SYL_6M' | 'SYL_Y' | 'SYL_3Y' | 'SYL_5Y';
+  /** 排序方向，默认 'desc' */
+  order?: 'desc' | 'asc';
+  /** 主题类型：'0'=行业 | '1'=概念 | '2'=全部，默认 '2' */
+  category?: '0' | '1' | '2';
+  /** 每页条数，默认 20，最大 50 */
+  pageSize?: number;
+  /** 页码，默认 1 */
+  page?: number;
+}
+```
+
+### 返回类型
+
+```typescript
+interface ThemeFundListResult {
+  items: ThemeFund[];
+  totalPages: number;
+  pageSize: number;
+  currentPage: number;
+}
+
+interface ThemeFund {
+  code: string;              // 主题代码，如 'BK0438'
+  name: string;              // 主题名称，如 '食品饮料'
+  dailyChange: number | null;    // 日涨幅 %
+  weeklyReturn: number | null;   // 近1周收益率 %
+  monthlyReturn: number | null;  // 近1月收益率 %
+  quarterlyReturn: number | null;// 近3月收益率 %
+  halfYearReturn: number | null; // 近6月收益率 %
+  yearlyReturn: number | null;   // 近1年收益率 %
+  threeYearReturn: number | null;// 近3年收益率 %
+  fiveYearReturn: number | null; // 近5年收益率 %
+  type: '行业' | '概念';
+}
+```
+
+### 示例
+
+```typescript
+// 获取全部主题，按日涨幅降序
+const themes = await sdk.getThemeList({ sort: 'ZDF', order: 'desc', pageSize: 20 });
+console.log(themes.items.map(t => `${t.name} ${t.dailyChange}%`));
+
+// 获取行业主题，按近1年收益率排序
+const industryThemes = await sdk.getThemeList({
+  category: '0',
+  sort: 'SYL_Y',
+  order: 'desc',
+});
+```
+
+---
+
 ## 注意事项
 
 1. **数据源**：分红走 `https://fund.eastmoney.com/Data/funddataIndex_Interface.aspx`；历史净值 / 同类排名走 `https://fund.eastmoney.com/pingzhongdata/{code}.js`；实时估值走 `https://fundgz.1234567.com.cn/js/{code}.js?rt={ts}`

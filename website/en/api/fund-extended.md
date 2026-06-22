@@ -252,3 +252,174 @@ const sdk = new StockSDK({
 2. **NAV history size**: `getFundNavHistory` returns thousands of points per call; cache at the application layer if accessed frequently
 3. **Same-fund shared file**: `getFundNavHistory` and `getFundRankHistory` actually download the same ~600KB pingzhongdata file. The SDK does not request-level cache yet — if both are needed simultaneously, dedupe or cache yourself
 4. **On-exchange ETF quotes / K-line**: for on-exchange ETFs (e.g. 510050, 159919), use stock endpoints like [`getFullQuotes`](./quotes.md) / [`getHistoryKline`](./kline.md) — not the methods on this page
+
+---
+
+## getThemeList
+
+Get the full list of theme funds (industry / concept categories).
+
+### Signature
+
+```typescript
+getThemeList(options?: GetThemeListOptions): Promise<ThemeFundListResult>
+```
+
+### Parameters
+
+```typescript
+interface GetThemeListOptions {
+  /** Sort field, default 'ZDF' (daily change) */
+  sort?: 'ZDF' | 'SYL_W' | 'SYL_M' | 'SYL_3M' | 'SYL_6M' | 'SYL_Y' | 'SYL_3Y' | 'SYL_5Y';
+  /** Sort direction, default 'desc' */
+  order?: 'desc' | 'asc';
+  /** Theme type: '0'=industry | '1'=concept | '2'=all, default '2' */
+  category?: '0' | '1' | '2';
+  /** Page size, default 20, max 50 */
+  pageSize?: number;
+  /** Page number, default 1 */
+  page?: number;
+}
+```
+
+### Return Type
+
+```typescript
+interface ThemeFundListResult {
+  items: ThemeFund[];
+  totalPages: number;
+  pageSize: number;
+  currentPage: number;
+}
+
+interface ThemeFund {
+  code: string;              // Theme code, e.g. 'BK0438'
+  name: string;              // Theme name, e.g. 'Food & Beverage'
+  dailyChange: number | null;    // Daily change %
+  weeklyReturn: number | null;   // 1-week return %
+  monthlyReturn: number | null;  // 1-month return %
+  quarterlyReturn: number | null;// 3-month return %
+  halfYearReturn: number | null; // 6-month return %
+  yearlyReturn: number | null;   // 1-year return %
+  threeYearReturn: number | null;// 3-year return %
+  fiveYearReturn: number | null; // 5-year return %
+  type: '行业' | '概念';
+}
+```
+
+### Example
+
+```typescript
+// Get all themes sorted by daily change descending
+const themes = await sdk.getThemeList({ sort: 'ZDF', order: 'desc', pageSize: 20 });
+console.log(themes.items.map(t => `${t.name} ${t.dailyChange}%`));
+
+// Get industry themes sorted by 1-year return
+const industryThemes = await sdk.getThemeList({
+  category: '0',
+  sort: 'SYL_Y',
+  order: 'desc',
+});
+```
+
+---
+
+## getHotThemes
+
+Get hot/trending theme rankings.
+
+### Signature
+
+```typescript
+getHotThemes(options?: GetHotThemesOptions): Promise<HotThemesResult>
+```
+
+### Parameters
+
+```typescript
+interface GetHotThemesOptions {
+  /** Sort field, default 'ZDF' (daily change) */
+  sort?: 'ZDF' | 'SYL_W' | 'SYL_M' | 'SYL_3M' | 'SYL_6M' | 'SYL_Y' | 'SYL_3Y' | 'SYL_5Y';
+  /** Sort direction, default 'desc' */
+  order?: 'desc' | 'asc';
+  /** Theme type: '0'=industry | '1'=concept | '2'=all, default '2' */
+  category?: '0' | '1' | '2';
+}
+```
+
+### Return Type
+
+```typescript
+interface HotThemesResult {
+  items: ThemeFund[];
+}
+```
+
+### Example
+
+```typescript
+const hot = await sdk.getHotThemes({ sort: 'SYL_W', order: 'desc' });
+console.log(hot.items.slice(0, 10).map(t => `${t.name}: weekly ${t.weeklyReturn}%`));
+```
+
+---
+
+## getThemeFunds
+
+Get funds under a specific theme, with pagination and sorting.
+
+### Signature
+
+```typescript
+getThemeFunds(themeCode: string, options?: GetThemeFundsOptions): Promise<ThemeFundItemList>
+```
+
+### Parameters
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `themeCode` | `string` | ✅ | Theme code, e.g. `'BK0438'` |
+| `options.sortColumn` | `string` | | Sort column: `'SYL_Z'` (1W), `'SYL_Y'` (1M), `'SYL_3Y'` (3M), `'SYL_1N'` (1Y, default), `'RZDF'` (daily) |
+| `options.sort` | `'asc'`\|`'desc'` | | Sort direction, default `'desc'` |
+| `options.pageSize` | `number` | | Items per page, default 20, max 30 |
+| `options.page` | `number` | | Page number, default 1 |
+| `options.fundType` | `string` | | Fund type filter (e.g. `'股票型'`, `'混合型'`) |
+
+### Return Type
+
+```typescript
+interface ThemeFundItemList {
+  items: ThemeFundItem[];
+  totalPages: number;
+  pageSize: number;
+  currentPage: number;
+}
+
+interface ThemeFundItem {
+  code: string;              // Fund code
+  name: string;              // Fund name
+  dailyReturn: number | null;     // Daily return %
+  weeklyReturn: number | null;    // 1-week return %
+  monthlyReturn: number | null;   // 1-month return %
+  threeMonthReturn: number | null;// 3-month return %
+  yearlyReturn: number | null;    // 1-year return %
+  fundType: string | null;        // Fund type label
+}
+```
+
+### Example
+
+```typescript
+// Get top 10 funds in 食品饮料 theme by 1-year return
+const funds = await sdk.getThemeFunds('BK0438', {
+  sortColumn: 'SYL_1N',
+  sort: 'desc',
+  pageSize: 10,
+});
+funds.items.forEach(f => {
+  console.log(`${f.code} ${f.name}: 1Y return ${f.yearlyReturn}%`);
+});
+```
+
+---
+

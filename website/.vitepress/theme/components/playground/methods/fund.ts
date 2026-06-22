@@ -9,6 +9,127 @@ import type { MethodSpec } from '../types';
 import { jsStr } from '../utils';
 
 export const fundMethods: MethodSpec[] = [
+  // ---- 主题基金 (v2) ----
+  {
+    name: 'getThemeList',
+    desc: '获取全部主题基金列表（行业/概念分类）',
+    category: 'fund',
+    market: ['fund'],
+    params: [
+      {
+        key: 'category',
+        label: '分类',
+        type: 'select',
+        default: '2',
+        options: [
+          { label: '全部', value: '2' },
+          { label: '行业', value: '0' },
+          { label: '概念', value: '1' },
+        ],
+      },
+    ],
+    code: (p) => {
+      const opts: string[] = [];
+      if (p.category && p.category !== '2') {
+        opts.push(`category: ${p.category}`);
+      }
+      return `const list = await sdk.fund.getThemeList(${opts.length ? `{ ${opts.join(', ')} }` : ''});
+console.log('total themes:', list.items.length);
+list.items.slice(0, 10).forEach(t => {
+  console.log(\`\${t.code} \${t.name}  近1周: \${t.weeklyReturn}%  近1月: \${t.monthlyReturn}%  近1年: \${t.yearlyReturn}%\`);
+});`;
+    },
+    run: (sdk, params) => {
+      const opts: Record<string, unknown> = {};
+      if (params.category && params.category !== '2') {
+        opts.category = Number(params.category) as 0 | 1;
+      }
+      return sdk.fund.getThemeList(opts);
+    },
+  },
+  {
+    name: 'getHotThemes',
+    desc: '获取热门主题排行（按涨跌幅/收益率排序）',
+    category: 'fund',
+    market: ['fund'],
+    params: [
+      {
+        key: 'sort',
+        label: '排序字段',
+        type: 'select',
+        default: 'ZDF',
+        options: [
+          { label: '日涨幅 (ZDF)', value: 'ZDF' },
+          { label: '近1周 (SYL_W)', value: 'SYL_W' },
+          { label: '近1月 (SYL_M)', value: 'SYL_M' },
+          { label: '近3月 (SYL_3M)', value: 'SYL_3M' },
+          { label: '近1年 (SYL_1N)', value: 'SYL_1N' },
+        ],
+      },
+    ],
+    code: (p) => `const list = await sdk.fund.getHotThemes(${(p.sort && p.sort !== 'ZDF') ? `{ sort: '${p.sort}' }` : ''});
+console.log('hot themes:', list.items.length);
+list.items.slice(0, 5).forEach(t => {
+  console.log(\`\${t.name}  日涨幅: \${t.dailyReturn}%  近1周: \${t.weeklyReturn}%\`);
+});`,
+    run: (sdk, params) => {
+      const opts: Record<string, unknown> = {};
+      if (params.sort) opts.sort = params.sort;
+      return sdk.fund.getHotThemes(opts);
+    },
+  },
+  {
+    name: 'getThemeFunds',
+    desc: '获取指定主题下的基金列表（含各阶段收益率）',
+    category: 'fund',
+    market: ['fund'],
+    params: [
+      {
+        key: 'themeCode',
+        label: '主题代码',
+        type: 'text',
+        default: 'BK0438',
+        required: true,
+        placeholder: '如 BK0438（食品饮料）',
+      },
+      {
+        key: 'sort',
+        label: '排序字段',
+        type: 'select',
+        default: 'SYL_1N',
+        options: [
+          { label: '近1周 (SYL_Z)', value: 'SYL_Z' },
+          { label: '近1月 (SYL_Y)', value: 'SYL_Y' },
+          { label: '近3月 (SYL_3Y)', value: 'SYL_3Y' },
+          { label: '近1年 (SYL_1N)', value: 'SYL_1N' },
+          { label: '日涨幅 (RZDF)', value: 'RZDF' },
+        ],
+      },
+      {
+        key: 'pageSize',
+        label: '每页条数',
+        type: 'number',
+        default: '10',
+        placeholder: '最大 30',
+      },
+    ],
+    code: (p) => `const list = await sdk.fund.getThemeFunds('${p.themeCode || 'BK0438'}', {
+  sortColumn: '${p.sort || 'SYL_1N'}',
+  pageSize: ${p.pageSize || 10},
+});
+console.log('funds in theme:', list.items.length);
+list.items.slice(0, 5).forEach(f => {
+  console.log(\`\${f.code} \${f.name}  近1年: \${f.yearlyReturn}%  日涨幅: \${f.dailyReturn}%\`);
+});`,
+    run: (sdk, params) => {
+      const opts: Record<string, unknown> = {
+        sortColumn: params.sort || 'SYL_1N',
+        pageSize: params.pageSize ? Number(params.pageSize) : 10,
+      };
+      return sdk.fund.getThemeFunds(params.themeCode || 'BK0438', opts);
+    },
+  },
+  // ---- 基金扩展数据 (v1.10.0+) ----
   {
     name: 'getFundDividendList',
     desc: '基金 / ETF 分红明细（按年份分页，可按代码过滤）',
